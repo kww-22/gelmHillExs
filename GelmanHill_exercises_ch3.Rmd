@@ -1,0 +1,285 @@
+---
+title: "GelmanHill Exercises Chapter 3"
+author: "Kyle Wasserberger"
+date: "12/5/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+# install.packages(c("knittr", "arm", "haven")
+library(arm)
+library(haven)
+knitr::opts_chunk$set(echo=TRUE,comment=NA,results="hold")
+
+```
+
+## Exercise 3.9.1
+#### Part A
+
+Use R to fit a linear regression model predicting *y* from *x~1~*, *x~2~* using the first 40 data points in the file. Summarize the inferences and check the fit of your model.
+
+```{r 1A}
+# load dataset
+exercise3.9.1 <- read.csv('~/Box/R/GelmanHill_exercises/ARM_Data/pyth/exercise3.9.1.dat', sep = '')
+
+# isolate rows 1-40 for model
+mod.data <- exercise3.9.1[1:40,]
+# summary.data.frame(mod.data)
+
+# calculate and summarize model
+mod <- lm(y ~ x1 + x2, data = mod.data)
+display(mod)
+
+```
+
+Model summary indicates large proportion of outcome variability (97%) is a accounted for by a linear combination of *x~1~* and *x~2~*. Residual standard deviation is also small.
+
+#### Part B
+
+Display the estimated model graphically
+
+```{r 1B}
+
+# setup 1x2 plotting space
+par(mfrow = c(1,2))
+
+#simulate model (100)
+mod.sim <- sim(mod)
+
+# first plot
+plot(x = mod.data$x1, y = mod.data$y,
+     xlab = "x1", ylab = "y")
+
+# simulate y against x1 with x2 held to its mean value
+for (i in 1:100) {
+curve(cbind(1, x, mean(mod.data$x2)) %*% mod.sim@coef[i,], col = "grey", add = TRUE)  
+}
+
+curve(cbind(1,x, mean(mod.data$x2)) %*% mod$coefficients, col = "black", add = TRUE)
+
+# add second plot
+plot(x = mod.data$x2, y = mod.data$y,
+     xlab = "x2", ylab = "")
+
+# simulate y against x2 with x1 held to its mean value
+for (i in 1:100) {
+curve(cbind(1, mean(mod.data$x1), x) %*% mod.sim@coef[i,], col = "grey", add = TRUE)  
+}
+
+curve(cbind(1, mean(mod.data$x1), x) %*% mod$coefficients, col = "black", add = TRUE)
+
+```
+
+
+#### Part C
+
+Make and interpret residual plot.
+
+```{r 1C}
+
+preds <- predict(mod)
+resids <- resid(mod)
+resid.error <- sigma(mod)
+
+# black line = +2 resid sd
+residual.plot(Expected = preds, Residuals = resids, sigma = resid.error,
+              main = "Residual Plot (exercise 3.9.1 part D)")
+```
+
+Greater proportion of residuals appear below zero indicating assumptions may be in violation.
+
+#### Part D
+
+Make predictions for the remaining 20 data points.
+
+```{r 1D}
+
+predict.data <- exercise3.9.1[41:60,]
+
+mod.predicts <- predict(mod, predict.data, interval = "prediction", level = 0.95)
+
+head(mod.predicts)
+
+```
+
+## Exercise 3.9.2
+
+We can predict log(earnings) from log(height) for certain population...
+
+Hints:
+
+* A person who is 66 inches tall is predicted to make $30,000
+* Every 1% increase in height = 0.8% increase in earnings
+* Earnings of 95% of people fall within 1.1 units of predicted values
+
+#### Part A
+
+Give regression line equation and residual standard deviation of the regression
+
+From the question, we know that:
+
+$$ln(y) = C+\beta*ln(x_1) \tag{1}$$ 
+
+Solving for *y* we get:
+
+$$y=e^c * e^{\beta*ln(x_1)} \tag{2}$$
+
+From the second hint we know that
+
+$$(1.008)y=e^c * e^{\beta*ln(1.01x_1)} \tag{3}$$
+
+We can now divide by *y* (and its equivalent from eq 2) to get:
+
+$$1.008=\frac{{e^c*e^{\beta*ln(1.01x_1)}}}{{e^c * e^{\beta*ln(x_1)}}} \tag{4}$$
+
+Cancelling out like terms and simplifying logs we are left with:
+
+$$1.008=\frac{(1.01x_1)^\beta}{(x_1)^\beta} \tag{5}$$
+
+More simplifying and cancelling gives us:
+
+$$1.008=1.01^\beta \tag{6}$$
+
+Finally, we have:
+
+$$\beta=\frac{ln(1.008)}{ln(1.01)} \tag{7}$$
+
+
+We can now calculate $\beta$ as:
+```{r echo=TRUE}
+
+# in R, the log function is the natural log
+beta <- log(1.008)/log(1.01)
+round(beta, digits = 3)
+
+```
+
+
+We can then plug $\beta$ and the given values from hint 1 for *y* and *x~1~* into our original regression formula solved for C 
+
+$$C=ln(30000)-0.801*ln(66) \tag{8}$$
+
+```{r echo=TRUE}
+c <- log(30000)-beta*log(66)
+round(c, digits = 3)
+```
+
+Plugging c into the original equation we finally have:
+
+$$ln(y)=6.954+0.801*ln(x_1) \tag{9}$$
+
+Double checking with our given information using equation 2 we get:
+
+```{r echo=TRUE}
+exp(c)*exp(beta*log(66))
+```
+
+#### Part B
+
+Standard deviation of log heights = 5%. What is the *R^2* of the regression?
+
+We know approximately 95% of earnings will fall within 2 standard deviations above and below the true mean.
+
+...
+
+## Exercise 3.9.3
+
+#### Part A
+
+Find out what happens when you regress one randomly generated variable on another. Is the predictor slope significant?
+
+```{r 3A}
+var1 <- rnorm(1000,0,1)
+var2 <- rnorm(1000,0,1)
+mod <- lm(var2 ~ var1)
+display(mod)
+```
+
+The slope coefficient is not statically significant since .04/.03 < 2.
+
+#### Part B
+
+Run a simulation of part A (100X). How many of the z-scores are statistically significant?
+```{r 3B}
+# set up empty vectors
+z.scores <- data.frame(score = rep(NA,100))
+percent.sig <- data.frame(percent_sig = rep(NA,100))
+
+for (k in 1:100) {
+  
+    for (j in 1:100) {
+    var1 <- rnorm(1000,0,1)
+    var2 <- rnorm(1000,0,1)
+    mod <- lm(var2 ~ var1)
+    z.scores[j,1] <- coef(mod)[2]/se.coef(mod)[2]
+    z.scores$sig <- ifelse(z.scores$score >= 2 | z.scores$score <= -2,1,0)
+    sig <- (sum(z.scores$sig, na.rm = TRUE)/length(z.scores$sig))*100
+    j <- 1}
+  
+  percent.sig[k,1] <- sig
+}
+
+
+# basic histogram of %significant scores over 100 simulations
+psig_hist <- hist(percent.sig$percent_sig,
+                  xlab = "Percent Significant",
+                  main = "", probability = TRUE)
+
+summary(percent.sig$percent_sig)
+
+```
+
+```{r include=FALSE}
+psig_mean <- mean(percent.sig$percent_sig)
+psig_min <- min(percent.sig$percent_sig)
+psig_max <- max(percent.sig$percent_sig)
+```
+
+
+On average, `r psig_mean` *z*-scores were statistically significant (range = `r psig_min`:`r psig_max`).
+
+## Exercise 3.9.4
+
+#### Part A
+
+Fit a regression of child test scores on mother's age, graph the data and fitted model, check assumptions, and interpret the slope coefficient. 
+
+```{r results='hold'}
+kidiq <- read_dta("ARM_Data/child.iq/kidiq.dta")
+
+mod <- lm(kid_score ~ mom_age, data = kidiq)
+display(mod)
+```
+
+Model summary indicates very little predictive ability for mother's age on child test score (*r^2* = 0.01; large residual SD). Slope coefficient = 0.70 indicating  that for a 1-unit increase in mother age we would predict a 0.7-unit increase in child test score. I.E. two identical children whose mothers are one year apart in age would have test score differences of 0.7 points. 
+
+```{r}
+par(mfrow = c(1,2))
+plot(kidiq$mom_age, kidiq$kid_score,
+     xlab = "Mom Age", ylab = "Kid Score")
+  curve(cbind(1,x) %*% coef(mod), lwd = 2, add = TRUE)
+  
+resids <- resid(mod)
+preds <- predict(mod)
+sig <- sigma(mod)
+
+residual.plot(Expected = preds, Residuals = resids, sigma = sig, main = "")
+```
+
+
+The most basic way of checking regression assumptions is to look for trends in the predicted vs. residual plot. We see no strong trends here.
+
+Since test score increases with mother's age, we would recommend mothers give birth as late as possible. However, this recommendation assumes the trend observed in the sample continues for unobserved mother ages (unlikely).
+
+#### Part B
+
+Repeat regression including mother education. Interpret both slope coefficients. Have your conclusions about the timing of birth changed?
+
+```{r}
+kidiq <- read_dta("ARM_Data/child.iq/kidiq.dta")
+
+mod <- lm(kid_score ~ mom_age + mom_hs, data = kidiq)
+display(mod)
+```
+
+Adding mother education only slightly improved our model predictive ability. However, the slope coeffient for age decreased from 0.7 to 0.3 suggesting the ifluence of mother age decreases if you also know whether the mom went to high-school. The positive slope coefficient for mother education indicates that babies of mothers who graduated high-school generally score higher than babies from mothers who did not graduate high-school (average difference of 11.31 points) . 
