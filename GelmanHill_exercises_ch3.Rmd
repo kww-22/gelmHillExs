@@ -1,7 +1,7 @@
 ---
 title: "GelmanHill Exercises Chapter 3"
 author: "Kyle Wasserberger"
-date: "12/5/2019"
+date: "Last Updated: 2019-12-05"
 output: html_document
 ---
 
