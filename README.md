@@ -5,7 +5,6 @@ Finally getting around to uploading my solutions to the chapter problems from An
 > Chapter 3 (last updated: 2019-12)
 
   - [R Script](./Chapter_3.R)
-  - [R Markdown](./GelmanHill_exercises_ch3.Rmd)
-  - [HTML](./GelmanHill_exercises_ch3.html)
+  - [R Markdown](./GelmanHill_exercises_ch3.Rmd) (use to render html)
 
 > Chapter 4 (last updated: up next)
